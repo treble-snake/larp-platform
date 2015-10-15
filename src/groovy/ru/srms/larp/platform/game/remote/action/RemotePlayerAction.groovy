@@ -20,7 +20,7 @@ interface RemotePlayerAction {
 
   RemotePlayerAction changeState(State newState) throws IllegalStateException
 
-  RemotePlayerAction validate() throws IllegalStateException, IllegalArgumentException
+  RemotePlayerAction validate(State supposedState) throws IllegalStateException, IllegalArgumentException
 
   RemotePlayerAction setCharacter(GameCharacter character)
 

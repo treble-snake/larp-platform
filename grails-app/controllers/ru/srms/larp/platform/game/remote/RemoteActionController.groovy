@@ -12,7 +12,6 @@ class RemoteActionController {
 
   RemotePlayerActionService remotePlayerActionService
 
-
   def show(RemotePlayerActionData data) {
     RemotePlayerAction action = resolveAction(data)
 
@@ -35,7 +34,7 @@ class RemoteActionController {
     try {
       action.setCharacter(params.character as GameCharacter)
           .setCurrentState(RemotePlayerAction.State.NEW)
-          .validate()
+          .validate(RemotePlayerAction.State.NEW)
       render view: action.setupHandler.inputForm, model: []
     } catch (IllegalStateException | IllegalArgumentException e) {
       render view: 'create', model: [error: e.message]
@@ -51,10 +50,10 @@ class RemoteActionController {
     String form = null
 
     try {
-      action.validate()
+      action.validate(RemotePlayerAction.State.NEW)
 
       form = action.setupHandler.inputForm
-      action.setupHandler.setParameters(params)
+      action.setupHandler.collectParameters(params)
           .validate()
 
       def data = remotePlayerActionService.saveActionData(action)
@@ -67,7 +66,7 @@ class RemoteActionController {
 
   @Transactional
   def startGroup(RemotePlayerActionData ownerData) {
-    ownerData.group.state = RemotePlayerActionsGroup.State.STARTED
+    ownerData.group.state = RemotePlayerActionsGroup.State.READY
     remotePlayerActionService.saveGroup(ownerData.group)
     redirect controller: 'remoteAction', action: 'show', id: ownerData.id
   }
@@ -81,10 +80,10 @@ class RemoteActionController {
       action.with {
         character = params.character as GameCharacter
         currentState = State.NEW
-        setupHandler.parameters = new HashMap<>(ownerAction.setupHandler.parameters)
+        setupHandler.parameters = ownerAction.setupHandler.parameters
         group = ownerAction.group
-        validate()
       }
+      action.validate(RemotePlayerAction.State.NEW)
 
       if(params.containsKey('doJoinGroup')) {
         remotePlayerActionService.saveActionData(action)
@@ -105,10 +104,10 @@ class RemoteActionController {
     String form = null
 
     try {
-      action.validate()
+      action.validate(RemotePlayerAction.State.NEW)
 
       form = action.setupHandler.inputForm
-      action.setupHandler.setParameters(params)
+      action.setupHandler.collectParameters(params)
           .validate()
 
       action.changeState(RemotePlayerAction.State.IN_PROGRESS)
@@ -125,7 +124,7 @@ class RemoteActionController {
     RemotePlayerAction action = resolveAction(data)
 
     try {
-      action.validate()
+      action.validate(RemotePlayerAction.State.IN_PROGRESS)
 
       if(action.processHandler.complete) {
         action.changeState(RemotePlayerAction.State.COMPLETE)
@@ -147,7 +146,7 @@ class RemoteActionController {
     RemotePlayerAction action = resolveAction(data)
 
     try {
-      action.validate()
+      action.validate(RemotePlayerAction.State.IN_PROGRESS)
       action.processHandler.iterate(params)
       remotePlayerActionService.saveActionData(action, data)
       redirect controller: 'remoteAction', action: 'process', id: data.id
@@ -160,7 +159,7 @@ class RemoteActionController {
     RemotePlayerAction action = resolveAction(data)
 
     try {
-      action.validate()
+      action.validate(RemotePlayerAction.State.COMPLETE)
       render view: action.resultHandler.view, model: [data: data]
     } catch (IllegalArgumentException e) {
       render view: 'result', model: [error: e.message]
@@ -169,7 +168,7 @@ class RemoteActionController {
   }
 
   private RemotePlayerAction resolveAction(RemotePlayerActionData data = null) {
-    RemotePlayerAction action
+    RemotePlayerAction action;
     if(data) remotePlayerActionService.loadAction(action, data)
 
     return action

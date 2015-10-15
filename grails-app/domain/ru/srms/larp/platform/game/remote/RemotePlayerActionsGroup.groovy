@@ -19,6 +19,6 @@ class RemotePlayerActionsGroup implements InGameStuff {
   }
 
   enum State {
-    GATHERING, STARTED
+    GATHERING, READY, COMPLETE
   }
 }
